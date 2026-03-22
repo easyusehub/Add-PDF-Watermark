@@ -95,7 +95,6 @@ canvas { width:100%; height:auto; border:1px solid #ccc; border-radius:8px; }
     font-weight: 600;
 }
 .bottom-buttons a:hover { background: #3b82f6; }
-/* Ad Placeholder */
 .ad-placeholder {
     margin: 15px 0;
     padding: 15px;
@@ -105,7 +104,6 @@ canvas { width:100%; height:auto; border:1px solid #ccc; border-radius:8px; }
     font-size: 0.9rem;
     text-align: center;
 }
-/* Professional color picker */
 #watermark-color {
     cursor: pointer;
     border-radius: 6px;
@@ -135,6 +133,7 @@ Select pages, enter watermark text, choose professional color & position, and do
 <input type="text" id="watermark-text" placeholder="Enter watermark text">
 <input type="color" id="watermark-color" value="#999999">
 <select id="watermark-position">
+    <option value="" disabled selected>Select Position</option>
     <option value="center">Center</option>
     <option value="top-left">Top Left</option>
     <option value="top-right">Top Right</option>
@@ -195,14 +194,8 @@ document.getElementById('file').addEventListener('change', async (e)=>{
         div.dataset.index=i-1;
         div.appendChild(canvas);
 
-        // Page select / deselect
         div.addEventListener('click', ()=>{
-            const idx = Number(div.dataset.index);
-            if(div.classList.contains('selected')){
-                div.classList.remove('selected');
-            } else {
-                div.classList.add('selected');
-            }
+            div.classList.toggle('selected');
         });
 
         container.appendChild(div);
@@ -210,12 +203,8 @@ document.getElementById('file').addEventListener('change', async (e)=>{
     document.getElementById('status').textContent=`✔ ${totalPages} pages loaded`;
 });
 
-function selectAll(){
-    document.querySelectorAll('.page-item').forEach(div=>div.classList.add('selected'));
-}
-function deselectAll(){
-    document.querySelectorAll('.page-item').forEach(div=>div.classList.remove('selected'));
-}
+function selectAll(){ document.querySelectorAll('.page-item').forEach(div=>div.classList.add('selected')); }
+function deselectAll(){ document.querySelectorAll('.page-item').forEach(div=>div.classList.remove('selected')); }
 
 async function addWatermark(){
     if(!pdfDocLib){ alert('Upload PDF first'); return; }
@@ -223,6 +212,7 @@ async function addWatermark(){
     const colorHex = document.getElementById('watermark-color').value;
     const position = document.getElementById('watermark-position').value;
     if(!text){ alert('Enter watermark text'); return; }
+    if(!position){ alert('Select watermark position'); return; }
 
     const rgb = hexToRgb(colorHex);
     const pages = pdfDocLib.getPages();
