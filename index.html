@@ -14,7 +14,20 @@
 
 <div class="upload" onclick="document.getElementById('file').click()">📁 Click to upload PDF</div>
 <input type="file" id="file" accept="application/pdf" hidden>
+
 <input type="text" id="watermark" placeholder="Enter watermark text">
+
+<select id="position">
+  <option value="center">Center</option>
+  <option value="top-left">Top Left</option>
+  <option value="top-right">Top Right</option>
+  <option value="bottom-left">Bottom Left</option>
+  <option value="bottom-right">Bottom Right</option>
+</select>
+
+<input type="color" id="color" value="#808080">
+<input type="number" id="size" value="50" min="10" max="150" placeholder="Font size">
+
 <button onclick="addWatermark()">Add Watermark</button>
 <button id="download-btn">📥 Download PDF</button>
 <p id="status">No file selected</p>
@@ -34,15 +47,25 @@ document.getElementById('file').addEventListener('change', e => {
     document.getElementById('status').textContent = file ? file.name : 'No file selected';
 });
 
+function hexToRgb(hex) {
+    hex = hex.replace("#","");
+    return {
+        r: parseInt(hex.substring(0,2),16),
+        g: parseInt(hex.substring(2,4),16),
+        b: parseInt(hex.substring(4,6),16)
+    };
+}
+
 async function addWatermark(){
     if(!file){ alert('Upload PDF first'); return; }
     const text = document.getElementById('watermark').value;
     if(!text){ alert('Enter watermark text'); return; }
 
-    if(file.size > 20 * 1024 * 1024){ // 20MB limit
-        alert('File too large! Max 20MB');
-        return;
-    }
+    const pos = document.getElementById('position').value;
+    const colorHex = document.getElementById('color').value;
+    const size = parseInt(document.getElementById('size').value) || 50;
+
+    if(file.size > 20 * 1024 * 1024){ alert('File too large! Max 20MB'); return; }
 
     document.getElementById('status').textContent = "Processing...";
 
@@ -51,15 +74,27 @@ async function addWatermark(){
         const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
         const pages = pdfDoc.getPages();
 
+        const rgb = hexToRgb(colorHex);
+
         pages.forEach(page => {
             const { width, height } = page.getSize();
+            let x = width/4, y = height/2;
+
+            switch(pos){
+                case "top-left": x=50; y=height-100; break;
+                case "top-right": x=width-200; y=height-100; break;
+                case "bottom-left": x=50; y=50; break;
+                case "bottom-right": x=width-200; y=50; break;
+                case "center": x=width/4; y=height/2; break;
+            }
+
             page.drawText(text, {
-                x: width/4,
-                y: height/2,
-                size: 50,
-                opacity: 0.3,
+                x:x,
+                y:y,
+                size:size,
+                opacity:0.3,
                 rotate: PDFLib.degrees(-45),
-                color: PDFLib.rgb(0.5,0.5,0.5)
+                color: PDFLib.rgb(rgb.r/255, rgb.g/255, rgb.b/255)
             });
         });
 
