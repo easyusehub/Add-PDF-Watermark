@@ -10,7 +10,7 @@ Free, client-side tool to **add custom text watermark** to PDF files. Fully brow
 - Premium **ILovePDF-style UI**  
 
 ## 📂 How to Use
-1. Open [Demo](https://easyusehub.github.io/Add-PDF-Watermark/add-watermark.html)  
+1. Open (https://easyusehub.github.io/Add-PDF-Watermark)  
 2. Upload PDF → Enter watermark → Set position, color, size → Click **Add Watermark**  
 3. Download processed PDF  
 
