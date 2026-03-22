@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>💧 Add Watermark | Free PDF Tool</title>
+<script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
+<style>
+body, html {
+    margin:0; padding:0; font-family:'Segoe UI',sans-serif;
+    background:#fff; height:100%; display:flex; justify-content:center; align-items:center;
+}
+.container {
+    max-width:450px; width:90%; padding:30px; border-radius:12px;
+    box-shadow:0 5px 20px rgba(0,0,0,0.1); text-align:center;
+}
+h2 { margin-bottom:20px; color:#1e293b; }
+.upload {
+    padding:30px; border:3px dashed #9333ea; border-radius:15px;
+    cursor:pointer; margin-bottom:15px; font-weight:600; color:#9333ea; transition:0.3s;
+}
+.upload:hover { background:#f5e6fa; transform:scale(1.02); }
+input[type="text"] { width:100%; padding:14px; margin-bottom:12px; border-radius:8px; border:1px solid #ccc; font-size:1rem; }
+button {
+    width:100%; padding:14px; border:none; border-radius:8px; font-weight:600; cursor:pointer; margin-bottom:12px;
+    background:#9333ea; color:#fff; transition:0.3s;
+}
+button:hover { background:#7e22ce; }
+#download-btn { display:none; background:#2563eb; }
+#download-btn:hover { background:#1e40af; }
+#status { font-size:0.95rem; color:#475569; margin-top:10px; }
+.bottom-buttons { display:flex; justify-content:center; gap:12px; margin-top:20px; }
+.bottom-buttons a { text-decoration:none; padding:10px 18px; border-radius:8px; color:#fff; font-weight:600; background:#1e293b; transition:0.3s; }
+.bottom-buttons a:hover { background:#3b82f6; }
+</style>
+</head>
+<body>
+
+<div class="container">
+<h2>💧 Add Watermark</h2>
+<div class="upload" onclick="document.getElementById('file').click()">📁 Click to upload PDF</div>
+<input type="file" id="file" accept="application/pdf" hidden>
+<input type="text" id="watermark" placeholder="Enter watermark text">
+<button onclick="addWatermark()">Add Watermark</button>
+<button id="download-btn">📥 Download PDF</button>
+<p id="status">No file selected</p>
+
+<div class="bottom-buttons">
+<a href="https://easyusehub.blogspot.com/p/free-pdf-tools-easyusehub.html?m=1">📂 All PDF Tools</a>
+<a href="https://easyusehub.blogspot.com/?m=1">🏠 Home</a>
+</div>
+</div>
+
+<script>
+let file = null;
+let downloadUrl = '';
+
+document.getElementById('file').addEventListener('change', e=>{
+    file = e.target.files[0];
+    document.getElementById('status').textContent = file ? file.name : 'No file selected';
+});
+
+async function addWatermark(){
+    if(!file){ alert('Upload PDF first'); return; }
+    const text = document.getElementById('watermark').value;
+    if(!text){ alert('Enter watermark text'); return; }
+
+    if(file.size > 20 * 1024 * 1024){ // 20MB limit
+        alert('File too large! Max 20MB');
+        return;
+    }
+
+    document.getElementById('status').textContent = "Processing...";
+
+    try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdfDoc = await PDFLib.PDFDocument.load(arrayBuffer);
+        const pages = pdfDoc.getPages();
+
+        pages.forEach(page => {
+            const { width, height } = page.getSize();
+            page.drawText(text, {
+                x: width/4,
+                y: height/2,
+                size: 50,
+                opacity: 0.3,
+                rotate: PDFLib.degrees(-45),
+                color: PDFLib.rgb(0.5,0.5,0.5)
+            });
+        });
+
+        const pdfBytes = await pdfDoc.save();
+        const blob = new Blob([pdfBytes], {type:'application/pdf'});
+        downloadUrl = URL.createObjectURL(blob);
+
+        const dlBtn = document.getElementById('download-btn');
+        dlBtn.style.display = 'block';
+        dlBtn.onclick = () => {
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = 'watermarked.pdf';
+            a.click();
+        };
+
+        document.getElementById('status').textContent = "✔ PDF ready! Click Download.";
+    } catch(e){
+        console.error(e);
+        document.getElementById('status').textContent = "❌ Error adding watermark!";
+    }
+}
+</script>
+
+</body>
+</html>
