@@ -15,7 +15,7 @@ body, html {
 }
 .container {
     width: 90%;
-    max-width: 600px;
+    max-width: 650px;
     padding: 25px;
     border-radius: 12px;
     box-shadow: 0 8px 25px rgba(0,0,0,0.1);
@@ -78,7 +78,7 @@ button:hover { background: #7e22ce; }
     transition: 0.3s;
 }
 .page-item.dragging { opacity:0.5; }
-canvas { width:100%; height:auto; }
+canvas { width:100%; height:auto; border:1px solid #ccc; border-radius:8px; }
 #status { margin-top: 10px; color: #475569; }
 .bottom-buttons {
     display: flex;
@@ -114,7 +114,9 @@ canvas { width:100%; height:auto; }
 
 <div class="container">
 <h2>💧 Add PDF Watermark</h2>
-<p class="description">Easily add custom text watermarks to your PDF. Upload your file, enter your watermark text, select position, and download instantly.</p>
+<p class="description">
+Easily add custom text watermarks to your PDF. Upload your file, choose color, position, and preview before downloading.
+</p>
 
 <!-- Top Ad Placeholder -->
 <div class="ad-placeholder">Ad Placeholder</div>
@@ -123,6 +125,7 @@ canvas { width:100%; height:auto; }
 <input type="file" id="file" accept="application/pdf" hidden>
 
 <input type="text" id="watermark-text" placeholder="Enter watermark text">
+<input type="color" id="watermark-color" value="#999999">
 <select id="watermark-position">
     <option value="center">Center</option>
     <option value="top-left">Top Left</option>
@@ -151,31 +154,48 @@ canvas { width:100%; height:auto; }
 let file=null, pdfDocLib=null;
 let downloadUrl='';
 
+pdfjsLib.GlobalWorkerOptions.workerSrc = 
+'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
 document.getElementById('file').addEventListener('change', async (e)=>{
     file = e.target.files[0];
     if(!file) return;
     if(file.size>30*1024*1024){ alert('Max 30MB'); return; }
+
     document.getElementById('status').textContent="Loading PDF...";
     const buffer = await file.arrayBuffer();
     pdfDocLib = await PDFLib.PDFDocument.load(buffer);
-    const numPages = pdfDocLib.getPages().length;
+
+    const pdfJsDoc = await pdfjsLib.getDocument({data: buffer}).promise;
+    const totalPages = pdfJsDoc.numPages;
 
     const container = document.getElementById('pages-container');
     container.innerHTML='';
-    for(let i=0;i<numPages;i++){
-        const div=document.createElement('div');
+    for(let i=1;i<=totalPages;i++){
+        const page = await pdfJsDoc.getPage(i);
+        const viewport = page.getViewport({scale:0.5});
+        const canvas = document.createElement('canvas');
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({canvasContext: canvas.getContext('2d'), viewport}).promise;
+
+        const div = document.createElement('div');
         div.className='page-item';
-        div.innerHTML=`<small>Page ${i+1}</small>`;
+        div.dataset.index=i-1;
+        div.appendChild(canvas);
         container.appendChild(div);
     }
-    document.getElementById('status').textContent=`✔ ${numPages} pages loaded`;
+    document.getElementById('status').textContent=`✔ ${totalPages} pages loaded`;
 });
 
 async function addWatermark(){
     if(!pdfDocLib){ alert('Upload PDF first'); return; }
-    const text=document.getElementById('watermark-text').value;
-    const position=document.getElementById('watermark-position').value;
+    const text = document.getElementById('watermark-text').value;
+    const colorHex = document.getElementById('watermark-color').value;
+    const position = document.getElementById('watermark-position').value;
     if(!text){ alert('Enter watermark text'); return; }
+
+    const rgb = hexToRgb(colorHex);
 
     const pages = pdfDocLib.getPages();
     pages.forEach(page=>{
@@ -193,25 +213,30 @@ async function addWatermark(){
             y:y,
             size:24,
             font:pdfDocLib.embedStandardFont('Helvetica-Bold'),
-            color:PDFLib.rgb(0.6,0.6,0.6),
-            rotate:PDFLib.degrees(-45),
-            xScale:1,
-            yScale:1,
+            color:PDFLib.rgb(rgb.r/255,rgb.g/255,rgb.b/255),
+            rotate:PDFLib.degrees(-45)
         });
     });
 
     const pdfBytes = await pdfDocLib.save();
     const blob = new Blob([pdfBytes], {type:'application/pdf'});
-    downloadUrl=URL.createObjectURL(blob);
-    const btn=document.getElementById('download-btn');
+    downloadUrl = URL.createObjectURL(blob);
+
+    const btn = document.getElementById('download-btn');
     btn.style.display='block';
-    btn.onclick=()=>{ 
+    btn.onclick = () => {
         const a=document.createElement('a');
-        a.href=downloadUrl;
-        a.download='watermarked.pdf';
+        a.href = downloadUrl;
+        a.download = 'watermarked.pdf';
         a.click();
     };
     document.getElementById('status').textContent="✔ Watermark added!";
+}
+
+function hexToRgb(hex){
+    hex = hex.replace('#','');
+    const bigint = parseInt(hex,16);
+    return {r:(bigint>>16)&255, g:(bigint>>8)&255, b:bigint&255};
 }
 </script>
 </body>
