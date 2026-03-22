@@ -55,7 +55,7 @@ button {
     border-radius: 10px;
     font-weight: 600;
     cursor: pointer;
-    margin: 6px 0;
+    margin: 6px 3px;
     background: #9333ea;
     color: #fff;
     transition: 0.3s;
@@ -74,10 +74,10 @@ button:hover { background: #7e22ce; }
     border-radius: 8px;
     padding: 5px;
     text-align: center;
-    cursor: grab;
+    cursor: pointer;
     transition: 0.3s;
 }
-.page-item.dragging { opacity:0.5; }
+.page-item.selected { border-color: #ef4444; background: #fee2e2; }
 canvas { width:100%; height:auto; border:1px solid #ccc; border-radius:8px; }
 #status { margin-top: 10px; color: #475569; }
 .bottom-buttons {
@@ -105,6 +105,15 @@ canvas { width:100%; height:auto; border:1px solid #ccc; border-radius:8px; }
     font-size: 0.9rem;
     text-align: center;
 }
+/* Professional color picker */
+#watermark-color {
+    cursor: pointer;
+    border-radius: 6px;
+    border: 2px solid #9333ea;
+    padding: 0;
+    height: 40px;
+    width: 60px;
+}
 </style>
 
 <script src="https://unpkg.com/pdf-lib/dist/pdf-lib.min.js"></script>
@@ -115,10 +124,9 @@ canvas { width:100%; height:auto; border:1px solid #ccc; border-radius:8px; }
 <div class="container">
 <h2>💧 Add PDF Watermark</h2>
 <p class="description">
-Easily add custom text watermarks to your PDF. Upload your file, choose color, position, and preview before downloading.
+Select pages, enter watermark text, choose professional color & position, and download instantly.
 </p>
 
-<!-- Top Ad Placeholder -->
 <div class="ad-placeholder">Ad Placeholder</div>
 
 <div class="upload" onclick="document.getElementById('file').click()">📁 Upload PDF</div>
@@ -134,6 +142,11 @@ Easily add custom text watermarks to your PDF. Upload your file, choose color, p
     <option value="bottom-right">Bottom Right</option>
 </select>
 
+<div style="margin:10px 0;">
+<button onclick="selectAll()">All Select</button>
+<button onclick="deselectAll()">All Deselect</button>
+</div>
+
 <div id="pages-container" class="pages-grid"></div>
 
 <button onclick="addWatermark()">Add Watermark</button>
@@ -146,16 +159,13 @@ Easily add custom text watermarks to your PDF. Upload your file, choose color, p
 <a href="https://easyusehub.blogspot.com/?m=1" target="_blank">🏠 Home</a>
 </div>
 
-<!-- Bottom Ad Placeholder -->
 <div class="ad-placeholder">Ad Placeholder</div>
 </div>
 
 <script>
 let file=null, pdfDocLib=null;
 let downloadUrl='';
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = 
-'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
 document.getElementById('file').addEventListener('change', async (e)=>{
     file = e.target.files[0];
@@ -171,6 +181,7 @@ document.getElementById('file').addEventListener('change', async (e)=>{
 
     const container = document.getElementById('pages-container');
     container.innerHTML='';
+
     for(let i=1;i<=totalPages;i++){
         const page = await pdfJsDoc.getPage(i);
         const viewport = page.getViewport({scale:0.5});
@@ -183,10 +194,28 @@ document.getElementById('file').addEventListener('change', async (e)=>{
         div.className='page-item';
         div.dataset.index=i-1;
         div.appendChild(canvas);
+
+        // Page select / deselect
+        div.addEventListener('click', ()=>{
+            const idx = Number(div.dataset.index);
+            if(div.classList.contains('selected')){
+                div.classList.remove('selected');
+            } else {
+                div.classList.add('selected');
+            }
+        });
+
         container.appendChild(div);
     }
     document.getElementById('status').textContent=`✔ ${totalPages} pages loaded`;
 });
+
+function selectAll(){
+    document.querySelectorAll('.page-item').forEach(div=>div.classList.add('selected'));
+}
+function deselectAll(){
+    document.querySelectorAll('.page-item').forEach(div=>div.classList.remove('selected'));
+}
 
 async function addWatermark(){
     if(!pdfDocLib){ alert('Upload PDF first'); return; }
@@ -196,9 +225,13 @@ async function addWatermark(){
     if(!text){ alert('Enter watermark text'); return; }
 
     const rgb = hexToRgb(colorHex);
-
     const pages = pdfDocLib.getPages();
-    pages.forEach(page=>{
+    const selectedIndexes = [...document.querySelectorAll('.page-item.selected')].map(d=>Number(d.dataset.index));
+
+    if(selectedIndexes.length === 0){ alert('Select pages to watermark'); return; }
+
+    for(let idx of selectedIndexes){
+        const page = pages[idx];
         const { width, height } = page.getSize();
         let x=0, y=0;
         switch(position){
@@ -216,7 +249,7 @@ async function addWatermark(){
             color:PDFLib.rgb(rgb.r/255,rgb.g/255,rgb.b/255),
             rotate:PDFLib.degrees(-45)
         });
-    });
+    }
 
     const pdfBytes = await pdfDocLib.save();
     const blob = new Blob([pdfBytes], {type:'application/pdf'});
